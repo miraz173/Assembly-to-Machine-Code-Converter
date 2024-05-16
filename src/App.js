@@ -41,31 +41,31 @@ function App() {
   const [dir, setDir] = useState(1);
   const [pa, setPa] = useState(Array(Math.pow(2, register)).fill(0));
   const [pf, setPf] = useState(Array(4).fill(0));
-  const [pi, setPi] = useState(0);
+  const [pi, setPi] = useState([]);
 
   const [cf, setCf] = useState(0);
   const [sf, setSf] = useState(0);
-  const [zf, setZf] = useState(0);
+  const [zf, setZf] = useState(1);
   const [of, setOf] = useState(0);
   const [a, setA] = useState(Array(Math.pow(2, register)).fill(0));
 
   const [machineCode, setMachineCode] = useState("");
-  const [x86Code, setX86Code] = useState("");
+  const [x86Code, setX86Code] = useState("xor a1, a1");
   const [xcode, setXcode] = useState([]);
   const [i, setI] = useState(0);
 
   useEffect(() => {
-    let lg = [1 * cpu + 1 * register, 2 * register, 1 * addressBit];
-    lg.sort((a, b) => a - b); // Sort the array numerically
-    setISA(lg[2] + 6);
-
+    let lg = [1 * cpu + 1 * register, 2 * register, 1 * addressBit, 1];
+    lg.sort((a, b) => b - a); // Sort the array numerically
+    setISA(lg[0] + 6);
+    setI(0);
     setA(Array(Math.pow(2, register)).fill(0));
     setPa([]);
   }, [addressBit, register, cpu]);
 
   let lineNo = -1;
   let labels = {};
-  
+
   useEffect(() => {
     setI(0);
     setA(a.fill(0));
@@ -80,128 +80,118 @@ function App() {
   }, [x86Code]);
 
   useEffect(() => {
-    lineNo = -1;
-    labels = {};
+    try {
+      lineNo = -1;
+      labels = {};
 
-    x86Code.split("\n").forEach((line) => {
-      lineNo++;
-      let x = line.split(/[ ,:]/).filter(Boolean);
-      try {
-        if (x.length === 4 || x[0].includes(":")) {
-          // label
-          let label = x[0];
-          labels[label] = lineNo;
-          x = x.slice(1);
+      x86Code.split("\n").forEach((line) => {
+        lineNo++;
+        let x = line.split(/[ ,:]/).filter(Boolean);
+        try {
+          if (x.length === 4 || x[0].includes(":")) {
+            // label
+            let label = x[0];
+            labels[label] = lineNo;
+            x = x.slice(1);
+          }
+        } catch (error) {
+          console.log(error, "<-label error");
         }
-      } catch (error) {
-        console.log(error, "<-label error");
-      }
-    });
-    lineNo = -1;
-    setMachineCode("");
-    setXcode([]);
-    x86Code.split("\n").forEach((line) => {
-      setXcode((xcode) => {
-        const updatedXcode = [...xcode]; // Make a copy of the current state array
-        updatedXcode.push(line.toUpperCase()); // Push the new line into the copied array
-        return updatedXcode; // Return the updated array to update the state
       });
-      lineNo++;
-      let x = line.split(/[ ,:]/).filter(Boolean);
-      try {
-        if (x.length === 4 || x[0].includes(":")) {
-          // label
-          let label = x[0];
-          labels[label] = lineNo;
-          x = x.slice(1);
-        }
+      lineNo = -1;
+      setMachineCode("");
+      setXcode([]);
+      x86Code.split("\n").forEach((line) => {
+        setXcode((xcode) => {
+          const updatedXcode = [...xcode]; // Make a copy of the current state array
+          updatedXcode.push(line.toUpperCase()); // Push the new line into the copied array
+          return updatedXcode; // Return the updated array to update the state
+        });
+        lineNo++;
+        let x = line.split(/[ ,:]/).filter(Boolean);
+        try {
+          if (x.length === 4 || x[0].includes(":")) {
+            // label
+            let label = x[0];
+            labels[label] = lineNo;
+            x = x.slice(1);
+          }
 
-        if (x.length === 2) {
-          // Branching instructions: jg main, jmp label
-          // setMachineCode((prev) => prev + "10 ");
-          let codeline = "10 ";
+          if (x.length === 2) {
+            // Branching instructions: jg main, jmp label
+            // setMachineCode((prev) => prev + "10 ");
+            let codeline = "10 ";
 
-          // setMachineCode(
-          //   (prev) => prev + branchingInstructions[x[0].toUpperCase()] + " "
-          // );
-          codeline += branchingInstructions[x[0].toUpperCase()] + " ";
-          if (!isNaN(x[1][1])) {
-            // if it is a register, jmpreg a4
-            let z = a[parseInt(x[1][1])];
-            z = z.toString(2);
-            while (z.length < addressBit) {
-              z = "0" + z;
+            codeline += branchingInstructions[x[0].toUpperCase()] + " ";
+            if (!isNaN(x[1][1])) {
+              // if it is a register, jmpreg a4
+              let z = a[parseInt(x[1][1])];
+              z = z.toString(2);
+              while (z.length < addressBit) {
+                z = "0" + z;
+              } //padStart(addressBit, "0") does the same work.
+              codeline += z + " ";
+              codeline = codeline.padEnd(isa + 3, "0") + "\n";
+            } else if (!isNaN(labels[x[1]])) {
+              //add address instead of label
+              let z = parseInt(labels[x[1]]);
+              z = z.toString(2);
+              while (z.length < addressBit) {
+                z = "0" + z;
+              } //padStart(addressBit, "0") does the same work.
+              // setMachineCode((prev) => prev + z + "\n");
+              codeline += z + " ";
+              codeline = codeline.padEnd(isa + 3, "0") + "\n";
+            } else {
+              // setMachineCode((prev) => prev + "undefined\n");
+              codeline += "undefined\n";
             }
-            // setMachineCode((prev) => prev + z + "\n");
-            codeline += z + "\n";
-          } else if (!isNaN(labels[x[1]])) {
-            //add address instead of label
-            let z = parseInt(labels[x[1]]);
-            z = z.toString(2);
-            while (z.length < addressBit) {
-              z = "0" + z;
-            } //padStart(addressBit, "0") does the same work.
-            // setMachineCode((prev) => prev + z + "\n");
-            codeline += z + " ";
-            codeline = codeline.padEnd(isa + 3, "0") + "\n";
-          } else {
-            // setMachineCode((prev) => prev + "undefined\n");
-            codeline += "undefined\n";
-          }
-          console.log(codeline);
-          setMachineCode((prev) => prev + codeline);
-        } else if (x.length === 3) {
-          // Arithmetic instructions: ADD R1, R2
-          // setMachineCode((prev) => {
-          //   return prev + (isNaN(x[2]) ? "00 " : "01 ");
-          // });
-          let codeline = isNaN(x[2]) ? "00 " : "01 ";
+            setMachineCode((prev) => prev + codeline);
+          } else if (x.length === 3) {
+            // Arithmetic instructions: ADD R1, R2
+            // setMachineCode((prev) => {
+            //   return prev + (isNaN(x[2]) ? "00 " : "01 ");
+            // });
+            let codeline = isNaN(x[2]) ? "00 " : "01 ";
 
-          // setMachineCode(
-          //   (prev) => prev + arithmeticInstructions[x[0].toUpperCase()] + " "
-          // );
-          codeline += arithmeticInstructions[x[0].toUpperCase()] + " ";
-          //reg1
-          let z = parseInt(x[1][1]);
-          z = z.toString(2);
-          while (z.length < register) {
-            z = "0" + z;
-          }
-          // setMachineCode((prev) => prev + z + " ");
-          codeline += z + " ";
-
-          if (isNaN(x[2])) {
-            //a4, reg2
-            let z = x[2][1];
-            z = parseInt(z);
+            codeline += arithmeticInstructions[x[0].toUpperCase()] + " ";
+            //reg1
+            let z = parseInt(x[1][1]);
             z = z.toString(2);
             while (z.length < register) {
               z = "0" + z;
-            } //padStart(register, "0") does the ame work.
-            // setMachineCode((prev) => prev + z + " 0\n");
+            }
             codeline += z + " ";
-            codeline = codeline.padEnd(isa + 4, "0") + "\n";
-          } else {
-            //4
-            let z = parseInt(x[2]);
-            z = z.toString(2).padStart(cpu, "0");
-            // setMachineCode((prev) => prev + z + "\n");
-            codeline += z + " ";
-            codeline = codeline.padEnd(isa + 4, "0") + "\n";
-          }
-          setMachineCode((prev) => prev + codeline);
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    });
 
-    let insts = [];
-    machineCode.split("\n").forEach((line) => insts.push(line.split(" ")));
-    const opcode = insts[i][1];
-    const operand1 = parseInt(insts[i][2], 2);
-    const operand2 = parseInt(insts[i][3], 2);
-    try {
+            if (isNaN(x[2])) {
+              //a4, reg2
+              let z = x[2][1];
+              z = parseInt(z);
+              z = z.toString(2);
+              while (z.length < register) {
+                z = "0" + z;
+              } //padStart(register, "0") does the ame work.
+              // setMachineCode((prev) => prev + z + " 0\n");
+              codeline += z + " ";
+              codeline = codeline.padEnd(isa + 4, "0") + "\n";
+            } else {
+              //4
+              let z = parseInt(x[2]);
+              z = z.toString(2).padStart(cpu, "0");
+              codeline += z + " ";
+              codeline = codeline.padEnd(isa + 4, "0") + "\n";
+            }
+            setMachineCode((prev) => prev + codeline);
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      });
+      let insts = [];
+      machineCode.split("\n").forEach((line) => insts.push(line.split(" ")));
+      const opcode = insts[i][1];
+      const operand1 = parseInt(insts[i][2], 2);
+      const operand2 = parseInt(insts[i][3], 2);
       if (insts[i][0] === "00") {
         // Register Mode; Arithmetic instruction
         switch (opcode) {
@@ -225,7 +215,6 @@ function App() {
             break;
           case arithmeticInstructions.SUB:
             a[operand1] = a[operand1] - a[operand2];
-            a[operand1] = a[operand1] < 0 ? 16 + a[operand1] : a[operand1];
             break;
           case arithmeticInstructions.MUL:
             a[operand1] = a[operand1] * a[operand2];
@@ -246,17 +235,16 @@ function App() {
           case arithmeticInstructions.CMP:
             {
               let temp = a[operand1] - a[operand2];
-              setOf(
-                0
-                // Math.abs(temp) !==
-                //   Math.abs(parseInt(temp.toString(2).slice(-cpu), 2))
-                //   ? 1
-                //   : 0
-              );
-              //setSf(temp.length > 3 ? a[operand1][-3] : 0);//but i've done arithmatic operation through decimal arithmatic; so, I get 3-7 =-0100, but should've been 1100 in bin operation
-              setSf(temp < 0 ? 1 : 0);
-              setCf(temp > 15 || temp < 0 ? 1 : 0);
+              setOf(0);
+              setCf(temp >= Math.pow(2, cpu) || temp < 0 ? 1 : 0);
               setZf(temp === 0 ? 1 : 0);
+              temp = temp < 0 ? Math.pow(2, cpu) + temp : temp;
+              setSf(
+                temp
+                  .toString(2)
+                  .slice(-1 * cpu)
+                  .padStart(cpu, "0")[0]
+              );
             }
             break;
           case arithmeticInstructions.DIV:
@@ -274,10 +262,22 @@ function App() {
               ? 1
               : 0
           );
-          setSf(a[operand1].length > 3 ? a[operand1][-3] : 0); //but i've done arithmatic operation through decimal arithmatic; so, I get 3-7 =-0100, but should've been 1100 in bin operation
-          //setSf(a[operand1] < 0 ? 1 : 0);
-          setCf(a[operand1] > 15 || a[operand1] < 0 ? 1 : 0);
+
+          if (a[operand1] < 0) {
+            setCf(1);
+          } else if (a[operand1] > Math.pow(2, cpu) - 1) {
+            setCf(1);
+          } else setCf(0);
+          // console.log(a[operand1], cf);
           setZf(a[operand1] === 0 ? 1 : 0);
+          a[operand1] =
+            a[operand1] < 0 ? Math.pow(2, cpu) + a[operand1] : a[operand1];
+          setSf(
+            a[operand1]
+              .toString(2)
+              .slice(-1 * cpu)
+              .padStart(cpu, "0")[0]
+          );
         }
         a[operand1] = parseInt(a[operand1].toString(2).slice(-1 * cpu), 2);
         a[operand1] = Math.abs(a[operand1]);
@@ -304,7 +304,6 @@ function App() {
             break;
           case arithmeticInstructions.SUB:
             a[operand1] = a[operand1] - operand2;
-            a[operand1] = a[operand1] < 0 ? 16 + a[operand1] : a[operand1];
             break;
           case arithmeticInstructions.MUL:
             a[operand1] = a[operand1] * operand2;
@@ -330,10 +329,15 @@ function App() {
                 //   ? 1
                 //   : 0
               );
-              //setSf(a[operand1].length > 3 ? a[operand1][-3] : 0);//but i've done arithmatic operation through decimal arithmatic; so, I get 3-7 =-0100, but should've been 1100 in bin operation
-              setSf(a[operand1] < 0 ? 1 : 0);
-              setCf(temp > 15 || temp < 0 ? 1 : 0);
+              setCf(temp >= Math.pow(2, cpu) || temp < 0 ? 1 : 0);
               setZf(temp === 0 ? 1 : 0);
+              temp = temp < 0 ? Math.pow(2, cpu) + temp : temp;
+              setSf(
+                temp
+                  .toString(2)
+                  .slice(-1 * cpu)
+                  .padStart(cpu, "0")[0]
+              );
             }
             break;
           case arithmeticInstructions.DIV:
@@ -351,10 +355,21 @@ function App() {
               ? 1
               : 0
           );
-          setSf(a[operand1].length > 3 ? a[operand1][-3] : 0); //but i've done arithmatic operation through decimal arithmatic; so, I get 3-7 =-0100, but should've been 1100 in bin operation
-          //setSf(a[operand1] < 0 ? 1 : 0);
-          setCf(a[operand1] > 15 || a[operand1] < 0 ? 1 : 0);
+
+          if (a[operand1] < 0) {
+            setCf(1);
+          } else if (a[operand1] > Math.pow(2, cpu) - 1) {
+            setCf(1);
+          } else setCf(0);
           setZf(a[operand1] === 0 ? 1 : 0);
+          a[operand1] =
+            a[operand1] < 0 ? Math.pow(2, cpu) + a[operand1] : a[operand1];
+          setSf(
+            a[operand1]
+              .toString(2)
+              .slice(-1 * cpu)
+              .padStart(cpu, "0")[0]
+          );
         }
         a[operand1] = parseInt(a[operand1].toString(2).slice(-1 * cpu), 2);
         a[operand1] = Math.abs(a[operand1]);
@@ -400,72 +415,75 @@ function App() {
             break;
         }
       }
+
+      if (dir === -1) {
+        setA(pa[pa.length - 1]);
+        setCf(pf[pf.length - 1][0]);
+        setSf(pf[pf.length - 1][1]);
+        setOf(pf[pf.length - 1][2]);
+        setZf(pf[pf.length - 1][3]);
+
+        setPa((prevPa) => [...prevPa.slice(0, -1)]);
+
+        setPf((prevPf) => [...prevPf.slice(0, -1)]);
+
+        setPi((prevPi) => [...prevPi.slice(0, -1)]);
+      }
+      setDir(1);
     } catch (error) {
       console.log(error);
     }
-    if (dir === -1) {
-      setA(pa[pa.length - 1]);
-      setCf(pf[pf.length - 1][0]);
-      setSf(pf[pf.length - 1][1]);
-      setOf(pf[pf.length - 1][2]);
-      setZf(pf[pf.length - 1][3]);
-
-      setPa((prevPa) => {
-        const newPa = [...prevPa.slice(0, -1)]; // Create a new array without the last sub-array
-        return newPa;
-      });
-
-      setPf((prevPf) => {
-        const newPf = [...prevPf.slice(0, -1)]; // Create a new array without the last sub-array
-        return newPf;
-      });
-
-      setPi((prevPi) => {
-        const newPi = [...prevPi.slice(0, -1)]; // Create a new array without the last element
-        return newPi;
-      });
-    }
-    setDir(1);
-    console.log(a);
   }, [x86Code, i, addressBit, register, cpu, isa]);
 
   function goForward() {
-    setPa((prev) => [...prev, [...a]]);
-    let x = [cf, sf, of, zf];
-    setPf((prev) => [...prev, [...x]]);
-    setPi((prev) => [...prev, i]);
-    if (i < xcode.length - 1) setI((i) => (i = i + 1));
+    if (i < xcode.length - 1) {
+      setPa((prev) => [...prev, [...a]]);
+      setPf((prev) => [...prev, [cf, sf, of, zf]]);
+      setPi((prev) => [...prev, i]);
+      setI((prev) => prev + 1);
+    } else {
+      console.log("End of the program\n", pi.length);
+    }
   }
 
   function goBack() {
     if (pi.length > 0) {
       setDir(-1);
       setI(pi[pi.length - 1]);
-    }
+    } else console.log("No more steps to go back");
   }
 
   const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     let intervalId;
+    let timeoutId;
 
     if (isRunning) {
-      // Start the timer if it's running
+      // Start the timer if running==true
       intervalId = setInterval(() => {
         goForward();
         console.log("Timer tick");
       }, 1000);
 
-      // Clear the interval after it has run 15 times
-      setTimeout(() => {
+      // Set a timeout to clear the interval after 25 seconds
+      timeoutId = setTimeout(() => {
         clearInterval(intervalId);
-        console.log("Timer stopped");
         setIsRunning(false);
+        console.log("Timer stopped=25");
       }, 25000); // 25 seconds, 25 loop
+    } else {
+      // Clear the interval and the timeout if isRunning is false
+      console.log("Timer stopped");
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
     }
 
-    // Cleanup function to clear the interval when the component unmounts
-    return () => clearInterval(intervalId);
+    // Cleanup function to clear the interval and timeout when the component unmounts or when isRunning changes
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+    };
   }, [isRunning]);
 
   // Function to start the timer
@@ -477,6 +495,8 @@ function App() {
   function stopTimer() {
     setIsRunning(false);
   }
+  let arr = machineCode.split("\n");
+  arr.pop();
 
   return (
     <div className="bg-gradient-to-r from-indigo-500 from-10% via-sky-500 via-30% to-emerald-500 to-90% min-h-[100vh] w-[100vw]">
@@ -486,7 +506,9 @@ function App() {
           type="number"
           id="cpu"
           value={cpu}
-          onChange={(e) => setCPU(e.target.value)}
+          onChange={(e) =>
+            parseInt(e.target.value) > 0 ? setCPU(e.target.value) : 1
+          }
           className="bg-inherit border border-white text-gray-800 px-2 mx-2 w-[5vw]"
         />
         <label htmlFor="register">Register:</label>
@@ -494,7 +516,9 @@ function App() {
           type="number"
           id="register"
           value={register}
-          onChange={(e) => setRegister(e.target.value)}
+          onChange={(e) =>
+            parseInt(e.target.value) > 0 ? setRegister(e.target.value) : 1
+          }
           className="bg-inherit border border-white text-gray-800 px-2 mx-2 w-[5vw]"
         />
         <label htmlFor="addressBit">Address Bit:</label>
@@ -502,7 +526,9 @@ function App() {
           type="number"
           id="addressBit"
           value={addressBit}
-          onChange={(e) => setAddressBit(e.target.value)}
+          onChange={(e) =>
+            parseInt(e.target.value) > 0 ? setAddressBit(e.target.value) : 1
+          }
           className="bg-inherit border border-white text-gray-800 px-2 mx-2 w-[5vw]"
         />
         <label htmlFor="addressBit">ISA size (Bit):</label>
@@ -510,11 +536,11 @@ function App() {
           type="number"
           id="addressBit"
           value={isa}
-          // onChange={(e) => setAddressBit(e.target.value)}
+          // onChange={(e) =>
+          //   parseInt(e.target.value) > isa ? setISA(e.target.value) : isa
+          // }
           className="bg-inherit border border-white text-gray-800 px-2 mx-2 w-[5vw]"
         />
-        {/* CPU: 4bit, Register: 4bit, Register Number: 8, RAM: 13bit, RAM number:
-        128, ISA size: 13bit */}
       </p>
 
       <div className="min-h-[85vh] font-mono m-auto">
@@ -526,7 +552,8 @@ function App() {
               name="x86Code"
               value={x86Code}
               onChange={(e) => setX86Code(e.target.value)}
-              className="h-[100%] w-[100%] bg-inherit border border-white font-semibold text-xl text-gray-800 tracking-wider p-2"
+              className="h-[100%] w-[100%] border border-white bg-indigo-200 bg-opacity-20 focus:border-red-500 focus:ring-0 text-gray-800 font-semibold text-xl tracking-wider p-2"
+              autoFocus
             />
           </div>
 
@@ -568,7 +595,7 @@ function App() {
               className="h-[100%] w-[100%] bg-inherit border text-xl text-gray-800 tracking-wider p-2"
               name="machineCode"
             >
-              {machineCode.split("\n").map((line, index) => {
+              {arr.map((line, index) => {
                 return (
                   <p key={index} className={index === i ? "bg-indigo-200" : ""}>
                     &nbsp;
@@ -583,10 +610,10 @@ function App() {
         </div>
       </div>
 
-      <div className="flex space-x-1 font-serif justify-center bg-inherit">
+      <div className="flex space-x-1 font-serif justify-center bg-inherit overflow-auto whitespace-normal max-w-[100vw]">
         <button
           onClick={goForward}
-          className="bg-teal-200 border-2 border-red-200 m-2 px-2"
+          className="bg-teal-200 border-2 border-red-200 hover:bg-blue-50 m-2 px-2"
         >
           <svg fill="#f90000" viewBox="0 0 57 57" width={30}>
             <path
@@ -600,7 +627,7 @@ function App() {
         </button>
         <button
           onClick={goBack}
-          className="bg-pink-200 border-2 border-teal-300 m-2 px-2"
+          className="bg-pink-200 border-2 border-teal-300 hover:bg-blue-50 m-2 px-2"
         >
           <svg
             fill="#f90fe8"
@@ -619,9 +646,13 @@ function App() {
         </button>
         <button
           onClick={startTimer}
-          className="bg-blue-200 border-2 border-gray-400 m-2 px-2"
+          className={
+            isRunning
+              ? "bg-blue-200 border-2 border-red-600 m-2 px-2 hover:bg-blue-400"
+              : "bg-cyan-200 border-2 border-sky-400 m-2 px-2 hover:bg-blue-50"
+          }
         >
-          <svg viewBox="0 0 16 16" width={30} fill="#0055e8">
+          <svg viewBox="0 0 16 16" width={30} fill="#0055e0">
             <path
               d="M6,11 L11,8 L6,5 L6,11 Z M8,14.6 C4.4,14.6 1.4,11.6 1.4,8 C1.4,4.4 4.4,1.4 8,1.4 C11.6,1.4 14.6,4.4 
               14.6,8 C14.6,11.6 11.6,14.6 8,14.6 L8,14.6 Z M8,0 C3.6,0 0,3.6 0,8 C0,12.4 3.6,16 8,16 C12.4,16 16,12.4 16,8 C16,3.6 12.4,0 8,0 L8,0 Z"
@@ -631,59 +662,33 @@ function App() {
         </button>
         <button
           onClick={stopTimer}
-          className="bg-blue-300 border-2 border-blue-600 m-2 px-2"
+          className="bg-blue-300 border-2 border-blue-600 hover:bg-blue-50 m-2 px-2"
         >
           <svg width={30} viewBox="0 0 24 24" fill="none">
             <path
               d="M8 9.5C8 9.03406 8 8.80109 8.07612 8.61732C8.17761 8.37229 8.37229 8.17761 8.61732 8.07612C8.80109 8 9.03406 8 9.5 8C9.96594 8 10.1989 8 10.3827 8.07612C10.6277 8.17761 10.8224 8.37229 10.9239 8.61732C11 8.80109 11 9.03406 11 9.5V14.5C11 14.9659 11 15.1989 10.9239 15.3827C10.8224 15.6277 10.6277 15.8224 10.3827 15.9239C10.1989 16 9.96594 16 9.5 16C9.03406 16 8.80109 16 8.61732 15.9239C8.37229 15.8224 8.17761 15.6277 8.07612 15.3827C8 15.1989 8 14.9659 8 14.5V9.5Z"
-              stroke="#1C274C"
-              stroke-width="1.5"
+              stroke="#e02700"
+              strokeWidth="1.5"
             />
             <path
               d="M13 9.5C13 9.03406 13 8.80109 13.0761 8.61732C13.1776 8.37229 13.3723 8.17761 13.6173 8.07612C13.8011 8 14.0341 8 14.5 8C14.9659 8 15.1989 8 15.3827 8.07612C15.6277 8.17761 15.8224 8.37229 15.9239 8.61732C16 8.80109 16 9.03406 16 9.5V14.5C16 14.9659 16 15.1989 15.9239 15.3827C15.8224 15.6277 15.6277 15.8224 15.3827 15.9239C15.1989 16 14.9659 16 14.5 16C14.0341 16 13.8011 16 13.6173 15.9239C13.3723 15.8224 13.1776 15.6277 13.0761 15.3827C13 15.1989 13 14.9659 13 14.5V9.5Z"
-              stroke="#1C274C"
-              stroke-width="1.5"
+              stroke="#e02700"
+              strokeWidth="1.5"
             />
             <path
               d="M7 3.33782C8.47087 2.48697 10.1786 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 10.1786 2.48697 8.47087 3.33782 7"
-              stroke="#1C274C"
-              stroke-width="1.5"
-              stroke-linecap="round"
+              stroke="#e02700"
+              strokeWidth="1.5"
+              strokeLinecap="round"
             />
           </svg>
         </button>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a0:</p>
-          <i>{a[0]}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a1:</p>
-          <i>{a[1]}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a2:</p>
-          <i>{a[2]}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a3:</p>
-          <i>{a[3]}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a4:</p>
-          <i>{a[4]}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a5:</p>
-          <i>{a[5]}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a6:</p>
-          <i>{a[6]}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
-          <p>a7:</p>
-          <i>{a[7]}</i>
-        </div>
+        {a.map((x, index) => (
+          <div className="flex border m-2 p-2 space-x-2">
+            <p>a{index}:</p>
+            <i>{x}</i>
+          </div>
+        ))}
         <div className="flex border m-2 p-2 space-x-2">
           <p>CF:</p>
           <i>{cf}</i>
@@ -693,12 +698,12 @@ function App() {
           <i>{sf}</i>
         </div>
         <div className="flex border m-2 p-2 space-x-2">
-          <p>OF:</p>
-          <i>{of}</i>
-        </div>
-        <div className="flex border m-2 p-2 space-x-2">
           <p>ZF:</p>
           <i>{zf}</i>
+        </div>
+        <div className="flex border m-2 p-2 space-x-2">
+          <p>OF:</p>
+          <i>{of}</i>
         </div>
         <div className="flex border m-2 p-2 space-x-2">
           <p>Crnt Index:</p>
@@ -714,17 +719,3 @@ function App() {
 }
 
 export default App;
-
-// 0011
-// 1001
-// 1100
-// 0100
-
-//0111
-//0111
-//1110
-//0010
-
-//1111= -1/15
-//1011= -5/11
-//11010=-6/10/26
