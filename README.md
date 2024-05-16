@@ -1,38 +1,70 @@
-# Assembly-to-Machine-Code-Converter
-A basic code converter that converts a watered down assembly code to Machine code. The program implements the knowledge learned from "CSE 3201: Computer Architecture and Design" course. The allowed operation types are immediate mode, register mode and branching mode; memory instructions are not yet implemented.
+# Getting Started with Create React App
 
-Instruction Type: 2 bit;
-Instruction: 4 bit;
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-Branching Mode: 10
-branchingInstructions = {
-  JMP: "0000",
-  JE: "0001",
-  JNE: "0010",
-  JL: "0011",
-  JLE: "0100",
-  JG: "0101",
-  JGE: "0110",
-  JC: "0111",
-  JNC: "1000",
-  JZ: "1001",
-  JNZ: "1010",
-  JMPREG: "1011",
-};
+## Available Scripts
 
-Register Mode: 00, Immediate Mode: 01
-arithmeticInstructions = {
-  AND: "0000",
-  OR: "0001",
-  XOR: "0010",
-  SHL: "0011",
-  SHR: "0100",
-  ADD: "0101",
-  SUB: "0110",
-  MUL: "0111",
-  ROL: "1000",
-  ROR: "1001",
-  NOT: "1010",
-  CMP: "1011",
-  DIV: "1100",
-};
+In the project directory, you can run:
+
+### `npm start`
+
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
+
+### `npm test`
+
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+
+### `npm run build`
+
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
+
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
+
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+### `npm run eject`
+
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+
+## Learn More
+
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+
+To learn React, check out the [React documentation](https://reactjs.org/).
+
+### Code Splitting
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+
+### Analyzing the Bundle Size
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+
+### Making a Progressive Web App
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+
+### Advanced Configuration
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+
+### Deployment
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+
+### `npm run build` fails to minify
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
